@@ -6,10 +6,7 @@ def get_pods():
 
     v1 = client.CoreV1Api()
     print("Getting pods with their IPs:")
-    return v1.list_pod_for_all_namespaces(watch=False)
+    pods =  v1.list_pod_for_all_namespaces(watch=False)
 
-
-def list_pods():
-    pods = get_pods()
-    for pod in pods.items:
-        print("%s\t%s\t%s" % (pod.status.pod_ip, pod.metadata.namespace, pod.metadata.name))
+    return [(pod.status.pod_ip + ':80', pod.metadata.labels['app'])
+            for pod in pods.items if 'app' in pod.metadata.labels and 'service' in pod.metadata.labels['app']]
