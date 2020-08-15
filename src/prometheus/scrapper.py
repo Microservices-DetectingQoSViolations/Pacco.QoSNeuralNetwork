@@ -7,7 +7,8 @@ dataset = tfio.experimental.IODataset.from_prometheus(
 
 print("Dataset Spec:\n{}\n".format(dataset.element_spec))
 
-for (time, value) in dataset:
+for (timestamp, value) in dataset:
     # time is milli second, convert to data time:
-    time = datetime.fromtimestamp(time // 1000)
-    print("{}: {}".format(time, value['kubernetes-pods']['10.1.39.142:80']['application_qos_violation']))
+    timestamp = timestamp // 1000
+    time = datetime.fromtimestamp(timestamp)
+    print("{} {}: {}".format(timestamp, time, value['kubernetes-pods']['10.1.39.142:80']['application_qos_violation']))
