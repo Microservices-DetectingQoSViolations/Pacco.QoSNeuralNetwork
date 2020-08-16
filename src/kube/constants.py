@@ -1,2 +1,2 @@
-pod_jobs = 'kubernetes_pods'
-pod_runtime_jobs = 'kubernetes_pods_runtimes'
+pod_jobs = 'kubernetes-pods'
+pod_runtime_jobs = 'kubernetes-pods-runtimes'
