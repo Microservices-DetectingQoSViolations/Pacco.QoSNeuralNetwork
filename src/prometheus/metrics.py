@@ -7,6 +7,7 @@ from src.prometheus.metrics_excluder import provide_exclude, provide_exclude_cle
 
 exlude_route = '''route=~".+"'''
 only_without_item = '''item!~".+"'''
+up_function_filter = '''app=~".+service", job="kubernetes-pods"'''
 
 def add_label_join(query):
     return f'label_join({query}, "instance", "", "app")'
@@ -45,7 +46,7 @@ metric_labels = {
         ('application_httprequests_transactions_max', f'label_join(max by (app, job) (rate(application_httprequests_transactions_sum{provide_exclude_clear()}[10s])), "instance", "", "app")'),
 
 
-        ('application_qos_violation', f'label_join(sum by (app, job) (increase(application_qos_violation{{{provide_exclude() + only_without_item}}}[10s])), "instance", "", "app")')
+        ('application_qos_violation', f'max by (app, instance, job) (label_join(sum by (app, job) (increase(application_qos_violation{{{provide_exclude() + only_without_item}}}[10s]) or 0 * up{{{provide_exclude() + up_function_filter}}}), "instance", "", "app"))')
     ],
 }
 
