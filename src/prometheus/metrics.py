@@ -37,13 +37,13 @@ metric_labels = {
 
     ],
     pod_jobs: [
-        ('application_httprequests_errors', f'label_join(sum by (app, job) (application_httprequests_errors{provide_exclude_clear()}), "instance", "", "app")'),
+        # ('application_httprequests_errors', f'label_join(sum by (app, job) (application_httprequests_errors{provide_exclude_clear()}), "instance", "", "app")'),
 
-        ('application_httprequests_error_rate_total', f'label_join(sum by (app, job) (rate(application_httprequests_error_rate_total{provide_exclude_clear()}[10s])), "instance", "", "app")'),
+        ('application_httprequests_error_rate_total', f'max by (app, instance, job) (label_join(sum by (app, job) (rate(application_httprequests_error_rate_total{provide_exclude_clear()}[10s]) or 0 * up{{{provide_exclude() + up_function_filter}}}), "instance", "", "app"))'),
 
         ('application_httprequests_transactions_sum', f'label_join(sum by (app, job) (rate(application_httprequests_transactions_sum{provide_exclude_clear()}[10s])), "instance", "", "app")'),
 
-        ('application_httprequests_transactions_max', f'label_join(max by (app, job) (rate(application_httprequests_transactions_sum{provide_exclude_clear()}[10s])), "instance", "", "app")'),
+        # ('application_httprequests_transactions_max', f'label_join(max by (app, job) (rate(application_httprequests_transactions_sum{provide_exclude_clear()}[10s])), "instance", "", "app")'),
 
 
         ('application_qos_violation', f'max by (app, instance, job) (label_join(sum by (app, job) (increase(application_qos_violation{{{provide_exclude() + only_without_item}}}[10s]) or 0 * up{{{provide_exclude() + up_function_filter}}}), "instance", "", "app"))')
