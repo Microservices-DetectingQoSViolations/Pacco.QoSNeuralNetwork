@@ -1,51 +1,35 @@
-from datetime import datetime
-from time import time
-import math
-
 from src.kube.pod import get_pod_names
 from src.prometheus.time_utils import generate_time
 from src.prometheus.metrics import metric_labels
-from src.prometheus.constants import prometheus_endpoint, excluding_services
+from src.prometheus.constants import prometheus_endpoint, prometheus_query, excluding_services
 
-import tensorflow as tf
-import tensorflow_io as tfio
+import pandas as pd
+import requests
 
-offset = 1597501140
-offset_in_ms = offset * 1000
-data_length = 210
+data_length = 420
+offsets = [1597954309, 1597954909, 1597955510, 1597956110, 1597956710,
+           1597957310, 1597957910, 1597958510, 1597959110, 1597959710,
+           1597960310, 1597960910, 1597961510, 1597962111, 1597962711,
+           1597963311, 1597963912, 1597964512, 1597965112, 1597965712,
+           1597966312, 1597966912]
 
-pods = get_pod_names(excluding_services)
+offsets_in_ms = [((offset - data_length + 1), offset) for offset in offsets]
+
+pods = ['vehicles-service', 'identity-service', 'customers-service', 'deliveries-service', 'orders-service',
+        'availability-service', 'parcels-service', 'pricing-service'] #get_pod_names(excluding_services)
 
 datasets = []
 
-time_series = generate_time(offset, data_length)
+for offset in offsets_in_ms:
+    prom_data_by_pods = {}
+    for job_name in metric_labels:
+        for metric in metric_labels[job_name]:
+            response =requests.get(prometheus_endpoint + prometheus_query,
+                                   params={'query': metric[1], 'start': offset[0], 'end': offset[1], 'step':1})
+            prometheus_data = response.json()['data']['result']
 
-
-for job_name in metric_labels:
-    for metric in metric_labels[job_name]:
-        print(f'Download {metric} from prometheus')
-        dataset_prom = tfio.experimental.IODataset.from_prometheus(metric[1], data_length, offset=offset_in_ms, endpoint=prometheus_endpoint)
-        for pod in pods:
-            dataset = dataset_prom.map(lambda k, v: (k // 1000, v[str(job_name)][pod]['']))
-
-            dataset_list = list(dataset.as_numpy_iterator())
-            if (len(dataset_list) != len(time_series)):
-                last = dataset_list[0][1]
-                for idx, value in enumerate(time_series):
-                    try:
-                        dest_elem = dataset_list[idx]
-                    except:
-                        dataset_list.append((value, last))
-                        continue
-                    if math.isnan(dest_elem[1]):
-                        dataset_list[idx] = last
-                    if dest_elem[0] != value:
-                        dataset_list[idx:idx] = [(value, last)]
-                    last = dataset_list[idx][1]
-                dataset = tf.data.Dataset.from_tensor_slices([x[1] for x in dataset_list])
-
-            # find the max value and scale the value to [0, 1]
-            v_max = dataset.reduce(tf.constant(0.0, tf.float64), tf.math.maximum)
-            dataset = dataset.map(lambda _, v: (v / v_max))
-            datasets.append(dataset)
-print(datasets)
+            for pod in pods:
+                metric_data = next(data['values'] for data in prometheus_data if data['metric']['app'] == pod)
+                metric_data = map(lambda val: float(val[1]), metric_data)
+                prom_data_by_pods[metric[0] + '_' + pod] = metric_data
+    datasets.append(pd.DataFrame.from_dict(prom_data_by_pods))
